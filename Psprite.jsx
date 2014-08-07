@@ -60,6 +60,9 @@
 
         // 「出力」ボタンのイベント
         dialog.btnOutput.onClick = function() {
+            //処理時間計測用
+            var actionTime = new Date().getTime();
+            
             //出力するディレクトリが指定されていない場合、処理を抜ける
             if (dialog.lblPath.text == def.msgChoseDir) {
                 alert(def.msgChoseDir);
@@ -89,8 +92,7 @@
             if (checkInfo.hasImg) {
                 ImageOutput(dialog.lblPath.text + def.fileImg);
             }
-            alert(def.msgFin);
-            dialog.close();
+            alert(def.msgFin + "\r\n処理時間 : " + (new Date().getTime() - actionTime) + "ms.");
         }
         dialog.show();
     })();
