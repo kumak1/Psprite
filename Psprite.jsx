@@ -8,7 +8,7 @@
 (function() {
 
     // 定数の宣言
-    var def = {
+    const def = {
         // ファイル
         fileHtm: "/index.html",
         fileCss: "/style.css",
@@ -239,21 +239,26 @@
 
     //レイヤー情報の取得
     function GetLayerInfo(doc) {
-        var results = [];
+        var results = new Array;
 
         var AddLayer = function AddLayer(arg) {
+            //関数をキャッシュ
+            var layerInfo = LayerInfo;
+            
             for (var key in arg) {
                 switch (key) {
                     case "artLayers":
                         var layer = arg[key];
-                        for (var i = 0; i < layer.length; i++) {
+                        for (var i = 0, len = layer.length; i < len; i++) {
                             var target = layer[i];
-                            if (!target.isBackgroundLayer && target.visible) results.push(new LayerInfo(target));
+                            if (target.visible){
+                                results.push(layerInfo(target));
+                            }
                         }
                         break;
                     case "layerSets":
                         var layer = arg[key];
-                        for (var i = 0; i < layer.length; i++) {
+                        for (var i = 0, len = layer.length; i < len; i++) {
                             AddLayer(layer[i]);
                         }
                         break;
@@ -268,59 +273,74 @@
 
     //レイヤー情報の取得
     function GetSetInfo(doc) {
-        var results = [];
+        var results = new Array;
 
         var artLayer = doc["artLayers"];
-        for (var i = 0; i < artLayer.length; i++) {
+        for (var i = 0, len = artLayer.length; i < len; i++) {
             var target = artLayer[i];
-            if (!target.isBackgroundLayer && target.visible) results.push(new LayerInfo(target));
+            if (target.visible){
+                results.push(LayerInfo(target));
+            }
         }
 
         var layerSet = doc["layerSets"];
-        for (var i = 0; i < layerSet.length; i++) {
+        for (var i = 0, len = layerSet.length; i < len; i++) {
             var group = layerSet[i];
             var layer = GetLayerInfo(group);
-            var b0 = [];
-            var b1 = [];
-            var b2 = [];
-            var b3 = [];
-            for (var j = 0; j < layer.length; j++) {
-                var l = layer[j];
-                b0.push(l.bounds[0]);
-                b1.push(l.bounds[1]);
-                b2.push(l.bounds[2]);
-                b3.push(l.bounds[3]);
-            }
-            results.push(new LayerInfo({
+
+            results.push(LayerInfo({
                 name: group.name,
-                bounds: {
-                    0: Math.min.apply(null, b0),
-                    1: Math.min.apply(null, b1),
-                    2: Math.max.apply(null, b2),
-                    3: Math.max.apply(null, b3)
-                }
+                bounds: GetMaxBounds(layer)
             }));
         }
 
         return results;
     }
 
+    // レイヤー群から最大となる位置情報を取得
+    function GetMaxBounds (obj) {
+        var b0 = new Array;
+        var b1 = new Array;
+        var b2 = new Array;
+        var b3 = new Array;
+
+        for (var i = 0, len = obj.length; i < len ; i++) {
+            var layer = obj[i];
+            b0[i] = layer.bounds[0];
+            b1[i] = layer.bounds[1];
+            b2[i] = layer.bounds[2];
+            b3[i] = layer.bounds[3];
+        }
+    
+        var result = new Array;
+        result[0] = Math.min.apply(null, b0);
+        result[1] = Math.min.apply(null, b1);
+        result[2] = Math.max.apply(null, b2);
+        result[3] = Math.max.apply(null, b3);
+        
+        return result;
+    }
+
     // レイヤー情報インスタンス生成
     function LayerInfo(obj) {
+        var result = new Object;
+        
         //レイヤー名
-        this.name = obj.name.replace(" ", "_");
+        result.name = obj.name.replace(" ", "_");
         //レイヤー位置
-        this.offsetX = parseInt(obj.bounds[0]); //X軸
-        this.offsetY = parseInt(obj.bounds[1]); //Y軸
+        result.offsetX = parseInt(obj.bounds[0]); //X軸
+        result.offsetY = parseInt(obj.bounds[1]); //Y軸
         //レイヤー幅
-        this.width = parseInt(obj.bounds[2]) - this.offsetX; //X軸
-        this.height = parseInt(obj.bounds[3]) - this.offsetY; //Y軸
-        this.bounds = obj.bounds;
+        result.width = parseInt(obj.bounds[2]) - result.offsetX; //X軸
+        result.height = parseInt(obj.bounds[3]) - result.offsetY; //Y軸
+        result.bounds = obj.bounds;
+        
+        return result;
     }
 
     //HTML生成
     function GenerateHTML(layerInfo) {
-        var html = [];
+        var html = new Array;
         html.push('<!DOCTYPE html>');
         html.push('<html lang="ja">');
         html.push('<head>');
@@ -385,7 +405,7 @@
 
     //CSS生成
     function GenerateCSS(layerInfo) {
-        var css = [];
+        var css = new Array;
 
         var base = "";
         for (key in layerInfo) {
