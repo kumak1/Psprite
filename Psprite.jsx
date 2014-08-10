@@ -114,6 +114,7 @@
         pnlPathInner = common.getBoundsPanel(pnlPath);
         win.lblPath = win.add(TEXT, pnlPathInner.get(), def.msgChoseDir);
         win.btnPath = win.add(BUTTON, common.getBoundsOutputButton(win.lblPath), def.btnChoseDir);
+        pnlPath.bounds[3] = pnlPathInner.get()[3] - 10;
 
         //「Option」パネルの表示
         pnlOption = win.add(PANEL, common.getBoundsOptionPanel(pnlPath), def.titleOption);
@@ -122,6 +123,7 @@
         win.chkMakeCSS = win.add(CHECK, pnlOptionInner.get(), def.lblCss);
         win.chkMakeIMG = win.add(CHECK, pnlOptionInner.get(), def.lblImg);
         win.chkMakeSet = win.add(CHECK, pnlOptionInner.get(), def.lblSet);
+        pnlOption.bounds[3] = pnlOptionInner.get()[3] - 10;
 
         win.chkMakeHTM.value = true;
         win.chkMakeCSS.value = true;
@@ -144,8 +146,6 @@
         const _PANEL_PADDING_INNER_ = 28;
         const _PANEL_MARGIN_ = 20;
         const _PANEL_LINEHEIGHT_ = 18;
-        const _PANEL_HEIGHT_OUTPUT_ = 55;
-        const _PANEL_HEIGHT_OPTION_ = 140;
         const _BUTTON_WIDTH_ = 80;
         const _BUTTON_HEIGHT_ = 30;
         const _OFFSET_X_ = _WINDOW_WIDTH_ - _OFFSET_X_MIN_;
@@ -185,7 +185,7 @@
         //Outputのパネルの位置情報を取得
         var GetBoundsOutputPanel =
             function() {
-                return GetBoundsFixed(_OFFSET_Y_MIN_, _PANEL_HEIGHT_OUTPUT_);
+                return GetBoundsFixed(_OFFSET_Y_MIN_, 0);
             };
         //Outputのボタンの位置情報を取得
         var GetBoundsOutputButton =
@@ -195,7 +195,7 @@
         //Optionのパネルの位置情報を取得
         var GetBoundsOptionPanel =
             function(obj) {
-                return GetBoundsFixed(obj.bounds[3] + _PANEL_MARGIN_, _PANEL_HEIGHT_OPTION_);
+                return GetBoundsFixed(obj.bounds[3] + _PANEL_MARGIN_, 0);
             };
         //ボタン用の位置情報を取得
         var GetBoundsButton =
