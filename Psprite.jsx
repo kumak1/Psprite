@@ -8,7 +8,7 @@
 (function() {
 
     // 定数の宣言
-    var def = {
+    const def = {
         // ファイル
         fileHtm: "/index.html",
         fileCss: "/style.css",
@@ -70,26 +70,24 @@
             }
 
             //出力チェック
-            var checkInfo = {
-                hasHtm: dialog.chkMakeHTM.value,
-                hasCss: dialog.chkMakeCSS.value,
-                hasImg: dialog.chkMakeIMG.value,
-                hasSet: dialog.chkMakeSet.value
-            };
+            var hasHtm = dialog.chkMakeHTM.value;
+            var hasCss = dialog.chkMakeCSS.value;
+            var hasImg = dialog.chkMakeIMG.value;
+            var hasSet = dialog.chkMakeSet.value;
 
             //レイヤー情報の取得
-            var layerInfo = (checkInfo.hasSet) ? GetSetInfo(activeDocument) : GetLayerInfo(activeDocument);
+            var layerInfo = hasSet? GetSetInfo(activeDocument) : GetLayerInfo(activeDocument);
 
             //HTML生成
-            if (checkInfo.hasHtm) {
+            if (hasHtm) {
                 FileOutput(dialog.lblPath.text + def.fileHtm, GenerateHTML(layerInfo));
             }
             //CSS生成
-            if (checkInfo.hasCss) {
+            if (hasCss) {
                 FileOutput(dialog.lblPath.text + def.fileCss, GenerateCSS(layerInfo));
             }
             //PNG生成
-            if (checkInfo.hasImg) {
+            if (hasImg) {
                 ImageOutput(dialog.lblPath.text + def.fileImg);
             }
             alert(def.msgFin + "\r\n処理時間 : " + (new Date().getTime() - actionTime) + "ms.");
@@ -104,8 +102,7 @@
         const TEXT = "statictext";
         const BUTTON = "button";
         const CHECK = "checkbox";
-
-        var common = new CommonDialog();
+        const common = CommonDialog();
 
         //ウィンドウ生成
         win = new Window(DIALOG, def.titleDialog);
@@ -221,39 +218,46 @@
                         return GetBoundsL(obj, _PANEL_PADDING_INNER_, _PANEL_PADDING_INNER_ * cnt, GetObjWidth(obj) - 15 - _PANEL_PADDING_INNER_, _PANEL_LINEHEIGHT_);
                     }
                 }
-            }
-        return {
-            getBounds: GetBounds,
-            getObjWidth: GetObjWidth,
-            getBoundsFixed: GetBoundsFixed,
-            getBoundsL: GetBoundsL,
-            getBoundsR: GetBoundsR,
-            getBoundsDialog: GetBoundsDialog,
-            getBoundsOutputPanel: GetBoundsOutputPanel,
-            getBoundsOutputButton: GetBoundsOutputButton,
-            getBoundsOptionPanel: GetBoundsOptionPanel,
-            getBoundsButton: GetBoundsButton,
-            getBoundsPanel: GetBoundsPanel,
-        }
+            };
+        
+        var result = new Object;
+        result.getBounds = GetBounds;
+        result.getObjWidth = GetObjWidth;
+        result.getBoundsFixed = GetBoundsFixed;
+        result.getBoundsL = GetBoundsL;
+        result.getBoundsR = GetBoundsR;
+        result.getBoundsDialog = GetBoundsDialog;
+        result.getBoundsOutputPanel = GetBoundsOutputPanel;
+        result.getBoundsOutputButton = GetBoundsOutputButton;
+        result.getBoundsOptionPanel = GetBoundsOptionPanel;
+        result.getBoundsButton = GetBoundsButton;
+        result.getBoundsPanel = GetBoundsPanel;
+        
+        return result;
     }
 
     //レイヤー情報の取得
     function GetLayerInfo(doc) {
-        var results = [];
+        var results = new Array;
 
         var AddLayer = function AddLayer(arg) {
+            //関数をキャッシュ
+            var layerInfo = LayerInfo;
+            
             for (var key in arg) {
                 switch (key) {
                     case "artLayers":
                         var layer = arg[key];
-                        for (var i = 0; i < layer.length; i++) {
+                        for (var i = 0, len = layer.length; i < len; i++) {
                             var target = layer[i];
-                            if (!target.isBackgroundLayer && target.visible) results.push(new LayerInfo(target));
+                            if (target.visible){
+                                results[results.length] = layerInfo(target);
+                            }
                         }
                         break;
                     case "layerSets":
                         var layer = arg[key];
-                        for (var i = 0; i < layer.length; i++) {
+                        for (var i = 0, len = layer.length; i < len; i++) {
                             AddLayer(layer[i]);
                         }
                         break;
@@ -268,194 +272,215 @@
 
     //レイヤー情報の取得
     function GetSetInfo(doc) {
-        var results = [];
+        var results = new Array;
+        
+        //関数をキャッシュ
+        var layerInfo = LayerInfo;
+        var getLayerInfo = GetLayerInfo;
+        var getMaxBounds = GetMaxBounds;
 
         var artLayer = doc["artLayers"];
-        for (var i = 0; i < artLayer.length; i++) {
+        for (var i = 0, len = artLayer.length; i < len; i++) {
             var target = artLayer[i];
-            if (!target.isBackgroundLayer && target.visible) results.push(new LayerInfo(target));
+            if (target.visible){
+                results[results.length] = layerInfo(target);
+            }
         }
 
         var layerSet = doc["layerSets"];
-        for (var i = 0; i < layerSet.length; i++) {
+        for (var i = 0, len = layerSet.length; i < len; i++) {
             var group = layerSet[i];
-            var layer = GetLayerInfo(group);
-            var b0 = [];
-            var b1 = [];
-            var b2 = [];
-            var b3 = [];
-            for (var j = 0; j < layer.length; j++) {
-                var l = layer[j];
-                b0.push(l.bounds[0]);
-                b1.push(l.bounds[1]);
-                b2.push(l.bounds[2]);
-                b3.push(l.bounds[3]);
-            }
-            results.push(new LayerInfo({
-                name: group.name,
-                bounds: {
-                    0: Math.min.apply(null, b0),
-                    1: Math.min.apply(null, b1),
-                    2: Math.max.apply(null, b2),
-                    3: Math.max.apply(null, b3)
-                }
-            }));
+            var layer = getLayerInfo(group);
+            var obj = new Object;
+            obj.name = group.name;
+            obj.bounds = getMaxBounds(layer);
+            results[results.length] = layerInfo(obj);
         }
 
         return results;
     }
 
+    // レイヤー群から最大となる位置情報を取得
+    function GetMaxBounds (obj) {
+        var b0 = new Array;
+        var b1 = new Array;
+        var b2 = new Array;
+        var b3 = new Array;
+
+        for (var i = 0, len = obj.length; i < len ; i++) {
+            var layer = obj[i];
+            b0[i] = layer.bounds[0];
+            b1[i] = layer.bounds[1];
+            b2[i] = layer.bounds[2];
+            b3[i] = layer.bounds[3];
+        }
+    
+        var result = new Array;
+        result[0] = Math.min.apply(null, b0);
+        result[1] = Math.min.apply(null, b1);
+        result[2] = Math.max.apply(null, b2);
+        result[3] = Math.max.apply(null, b3);
+        
+        return result;
+    }
+
     // レイヤー情報インスタンス生成
     function LayerInfo(obj) {
+        var result = new Object;
+        
         //レイヤー名
-        this.name = obj.name.replace(" ", "_");
+        result.name = obj.name.replace(" ", "_");
         //レイヤー位置
-        this.offsetX = parseInt(obj.bounds[0]); //X軸
-        this.offsetY = parseInt(obj.bounds[1]); //Y軸
+        result.offsetX = 0 + obj.bounds[0]; //X軸
+        result.offsetY = 0 + obj.bounds[1]; //Y軸
         //レイヤー幅
-        this.width = parseInt(obj.bounds[2]) - this.offsetX; //X軸
-        this.height = parseInt(obj.bounds[3]) - this.offsetY; //Y軸
-        this.bounds = obj.bounds;
+        result.width = 0 + obj.bounds[2] - result.offsetX; //X軸
+        result.height = 0 + obj.bounds[3] - result.offsetY; //Y軸
+        result.bounds = obj.bounds;
+        
+        return result;
     }
 
     //HTML生成
     function GenerateHTML(layerInfo) {
-        var html = [];
-        html.push('<!DOCTYPE html>');
-        html.push('<html lang="ja">');
-        html.push('<head>');
-        html.push('<title>Psprite</title>');
-        html.push('<meta charset="shift_jis">');
-        html.push('<meta name="viewport" content="width=device-width, initial-scale=1">');
-        html.push('<link rel="stylesheet" href=".' + def.fileCss + '">');
-        html.push('<link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.5.0/pure-min.css">');
-        html.push('<link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.5.0/grids-responsive.css">');
-        html.push('</head>');
-        html.push('<body>');
+        const cr = "\r\n";
+        
+        var html = "";
+        html += cr + '<!DOCTYPE html>';
+        html += cr + '<html lang="ja">';
+        html += cr + '<head>';
+        html += cr + '<title>Psprite</title>';
+        html += cr + '<meta charset="shift_jis">';
+        html += cr + '<meta name="viewport" content="width=device-width, initial-scale=1">';
+        html += cr + '<link rel="stylesheet" href=".' + def.fileCss + '">';
+        html += cr + '<link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.5.0/pure-min.css">';
+        html += cr + '<link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.5.0/grids-responsive.css">';
+        html += cr + '<style>';
+        html += cr + 'body {color:#777;}';
+        html += cr + '.header {background: none repeat scroll 0 0 #fff;border-bottom: 1px solid #eee;margin: 0 auto;max-width: 768px;padding: 1em;text-align: center;}';
+        html += cr + '.header h1 {font-family:"omnes-pro";font-size: 3em;font-weight: 100;margin: 0;color: rgb(75, 75, 75);}';
+        html += cr + '.header h2 {color: #666;font-size: 1.2em;font-weight: 100;line-height: 1.5;margin: 0;}';
+        html += cr + '.content {margin-left: auto;margin-right: auto;max-width: 768px;padding-left: 2em;padding-right: 2em;}';
+        html += cr + '.content h3 {color: #555;font-size: 1em;font-weight: 100;line-height: 1.5;margin:4em 0 0;}';
+        html += cr + '.footer {background: none repeat scroll 0 0 rgb(250, 250, 250);border-top: 1px solid #eee;font-size: 87.5%;margin-top: 3.4em;padding: 1.1em;}';
+        html += cr + '.legal-license {margin: 0;text-align: left;}';
+        html += cr + '.legal-copyright, .legal-links, .legal-links li {margin: 0;text-align: right;}';
+        html += cr + '.legal-links {list-style: none outside none;margin-bottom: 0;padding: 0;}';
+        html += cr + 'pre, code {background: none repeat scroll 0 0 rgb(250, 250, 250);color: #333;font-family: Ricty,Consolas,"Liberation Mono",Courier,monospace;font-size: 1em;}';
+        html += cr + 'pre {white-space: pre-wrap;word-wrap: break-word; padding:1.6em;border:1px #ddd solid}';
+        html += cr + '</style>';        
+        html += cr + '</head>';
+        html += cr + '<body>';
 
-        html.push('<div class="header">');
-        html.push('  <h1>Psprite</h1>');
-        html.push('  <h2>Quickstart your next web project with these example css.</h2>');
-        html.push('</div>');
+        html += cr + '<div class="header">';
+        html += cr + '  <h1>Psprite</h1>';
+        html += cr + '  <h2>Quickstart your next web project with these example css.</h2>';
+        html += cr + '</div>';
 
-        html.push('<div class="content">')
-        for (key in layerInfo) {
-            html.push('  <h3>' + layerInfo[key].name + '</h3>');
-
-            html.push('<pre><code>{');
-            html.push('  background-image: url("sprite.png");');
-            html.push('  background-repeat: no-repeat;')
-            html.push('  display: block;');
-            html.push('  overflow: hidden;');
-            html.push('  text-indent: 100%;');
-            html.push('  white-space: nowrap;');
-            html.push('  background-position: -' + layerInfo[key].offsetX + 'px -' + layerInfo[key].offsetY + 'px;');
-            html.push('  width: ' + layerInfo[key].width + 'px;');
-            html.push('  height: ' + layerInfo[key].height + 'px;');
-            html.push('}');
-            html.push('</code></pre>');
-
-            html.push('  <div class="' + layerInfo[key].name + '"></div>');
+        html += cr + '<div class="content">';
+        
+        for (var i = 0, len = layerInfo.length; i < len; i++) {
+            var layer = layerInfo[i];
+            html += cr + '  <h3>' + layer.name + '</h3>';
+            html += cr + '<pre><code>{';
+            html += cr + '  background-image: url("sprite.png");';
+            html += cr + '  background-repeat: no-repeat;';
+            html += cr + '  display: block;';
+            html += cr + '  overflow: hidden;';
+            html += cr + '  text-indent: 100%;';
+            html += cr + '  white-space: nowrap;';
+            html += cr + '  background-position: -' + layer.offsetX + 'px -' + layer.offsetY + 'px;';
+            html += cr + '  width: ' + layer.width + 'px;';
+            html += cr + '  height: ' + layer.height + 'px;';
+            html += cr + '}';
+            html += cr + '</code></pre>';
+            html += cr + '  <div class="' + layer.name + '"></div>';
         }
-        html.push('</div>');
+        html += cr + '</div>';
 
-        html.push('<div class="footer">');
-        html.push('  <div class="legal pure-g">');
-        html.push('    <div class="pure-u-1-2">');
-        html.push('      <p class="legal-license">');
-        html.push('        Designed by <a href="https://twitter.com/kumak1">@kumak1</a>.<br>');
-        html.push('        Code licensed under <a target="_blank" href="https://github.com/twbs/bootstrap/blob/master/LICENSE">MIT</a>.');
-        html.push('      </p>');
-        html.push('    </div>');
-        html.push('  <div class="pure-u-1-2">');
-        html.push('    <ul class="legal-links">');
-        html.push('      <li><a href="https://github.com/kumak1/Psprite">GitHub Project</a></li>');
-        html.push('    </ul>');
-        html.push('    <p class="legal-copyright">');
-        html.push('      &copy; 2014 kumak1. All rights reserved.');
-        html.push('    </p>');
-        html.push('  </div>');
-        html.push('</div>');
+        html += cr + '<div class="footer">';
+        html += cr + '  <div class="legal pure-g">';
+        html += cr + '    <div class="pure-u-1-2">';
+        html += cr + '      <p class="legal-license">';
+        html += cr + '        Designed by <a href="https://twitter.com/kumak1">@kumak1</a>.<br>';
+        html += cr + '        Code licensed under <a target="_blank" href="https://github.com/twbs/bootstrap/blob/master/LICENSE">MIT</a>.';
+        html += cr + '      </p>';
+        html += cr + '    </div>';
+        html += cr + '  <div class="pure-u-1-2">';
+        html += cr + '    <ul class="legal-links">';
+        html += cr + '      <li><a href="https://github.com/kumak1/Psprite">GitHub Project</a></li>';
+        html += cr + '    </ul>';
+        html += cr + '    <p class="legal-copyright">';
+        html += cr + '      &copy; 2014 kumak1. All rights reserved.';
+        html += cr + '    </p>';
+        html += cr + '  </div>';
+        html += cr + '</div>';
 
-        html.push('</body>');
-        html.push('</html>');
+        html += cr + '</body>';
+        html += cr + '</html>';
 
-        return html.join("\r\n");
+        return html;
     }
 
     //CSS生成
     function GenerateCSS(layerInfo) {
-        var css = [];
+        const cr = "\r\n";
+        var css = "";
 
-        var base = "";
-        for (key in layerInfo) {
-            base += ('.' + layerInfo[key].name + ',');
+        for (var i = 0, len = layerInfo.length; i < len; i++) {
+            css += ('.' + layerInfo[i].name + ',');
         }
-        base = base.slice(0, -1);
+        css = css.slice(0, -1);
 
-        css.push(base + '{');
-        css.push('  background-image: url("sprite.png");');
-        css.push('  background-repeat: no-repeat;')
-        css.push('  display: block;');
-        css.push('  overflow: hidden;');
-        css.push('  text-indent: 100%;');
-        css.push('  white-space: nowrap;');
-        css.push('}');
+        css += cr + '{';
+        css += cr + '  background-image: url("sprite.png");';
+        css += cr + '  background-repeat: no-repeat;';
+        css += cr + '  display: block;';
+        css += cr + '  overflow: hidden;';
+        css += cr + '  text-indent: 100%;';
+        css += cr + '  white-space: nowrap;';
+        css += cr + '}';
 
-        for (key in layerInfo) {
-            css.push('.' + layerInfo[key].name + ' {');
-            css.push('  background-position: -' + layerInfo[key].offsetX + 'px -' + layerInfo[key].offsetY + 'px;');
-            css.push('  width: ' + layerInfo[key].width + 'px;');
-            css.push('  height: ' + layerInfo[key].height + 'px;');
-            css.push('}');
+        for (var i = 0, len = layerInfo.length; i < len; i++) {
+            var layer = layerInfo[i];
+            css += cr + '.' + layer.name + ' {';
+            css += cr + '  background-position: -' + layer.offsetX + 'px -' + layer.offsetY + 'px;';
+            css += cr + '  width: ' + layer.width + 'px;';
+            css += cr + '  height: ' + layer.height + 'px;';
+            css += cr + '}';
         }
-        css.push('body {color:#777;}');
-        css.push('.header {background: none repeat scroll 0 0 #fff;border-bottom: 1px solid #eee;margin: 0 auto;max-width: 768px;padding: 1em;text-align: center;}');
-        css.push('.header h1 {font-family:"omnes-pro";font-size: 3em;font-weight: 100;margin: 0;color: rgb(75, 75, 75);}');
-        css.push('.header h2 {color: #666;font-size: 1.2em;font-weight: 100;line-height: 1.5;margin: 0;}');
-        css.push('.content {margin-left: auto;margin-right: auto;max-width: 768px;padding-left: 2em;padding-right: 2em;}');
-        css.push('.content h3 {color: #555;font-size: 1em;font-weight: 100;line-height: 1.5;margin:4em 0 0;}');
-        css.push('.footer {background: none repeat scroll 0 0 rgb(250, 250, 250);border-top: 1px solid #eee;font-size: 87.5%;margin-top: 3.4em;padding: 1.1em;}');
-        css.push('.legal-license {margin: 0;text-align: left;}');
-        css.push('.legal-copyright, .legal-links, .legal-links li {margin: 0;text-align: right;}');
-        css.push('.legal-links {list-style: none outside none;margin-bottom: 0;padding: 0;}');
-        css.push('pre, code {background: none repeat scroll 0 0 rgb(250, 250, 250);color: #333;font-family: Ricty,Consolas,"Liberation Mono",Courier,monospace;font-size: 1em;}');
-        css.push('pre {white-space: pre-wrap;word-wrap: break-word; padding:1.6em;border:1px #ddd solid}');
-        return css.join("\r\n");
+
+        return css;
     }
 
     // ファイル出力
     function FileOutput(filename, arg) {
-        if (filename) {
-            fileObj = new File(filename);
-            flag = fileObj.open("w");
+        fileObj = new File(filename);
+        flag = fileObj.open("w");
 
-            if (flag == true) {
-                fileObj.write(arg);
-                fileObj.close();
-            } else {
-                alert(def.msgFileOutputFalse);
-            }
+        if (flag == true) {
+            fileObj.write(arg);
+            fileObj.close();
+        } else {
+            alert(def.msgFileOutputFalse);
         }
     }
 
     // 画像出力
     function ImageOutput(filename) {
-        if (filename) {
-            fileObj = new File(filename);
-            flag = fileObj.open("w");
+        fileObj = new File(filename);
+        flag = fileObj.open("w");
 
-            if (flag == true) {
-                pngOpt = new ExportOptionsSaveForWeb();
-                pngOpt.format = SaveDocumentType.PNG;
-                pngOpt.PNG8 = false;
-                pngOpt.includeProfile = false;
-                pngOpt.interlaced = false;
-                pngOpt.alphaChannels = true;
-                activeDocument.exportDocument (fileObj, ExportType.SAVEFORWEB, pngOpt);
-            } else {
-                alert(def.msgFileOutputFalse);
-            }
+        if (flag == true) {
+            pngOpt = new ExportOptionsSaveForWeb();
+            pngOpt.format = SaveDocumentType.PNG;
+            pngOpt.PNG8 = false;
+            pngOpt.includeProfile = false;
+            pngOpt.interlaced = false;
+            pngOpt.alphaChannels = true;
+            activeDocument.exportDocument (fileObj, ExportType.SAVEFORWEB, pngOpt);
+        } else {
+            alert(def.msgFileOutputFalse);
         }
     }
 })();
